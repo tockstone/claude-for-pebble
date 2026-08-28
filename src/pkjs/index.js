@@ -1,3 +1,5 @@
+var DEFAULT_BASE_URL = 'https://api.anthropic.com/v1/messages';
+
 // Parse encoded conversation string "[U]msg1[A]msg2..." into messages array
 function parseConversation(encoded) {
   var messages = [];
@@ -28,7 +30,8 @@ function isOAuthToken(key) {
 // Get response from Claude API
 function getClaudeResponse(messages) {
   var apiKey = localStorage.getItem('api_key');
-  var baseUrl = localStorage.getItem('base_url') || 'https://api.anthropic.com/v1/messages';
+  var baseUrl = localStorage.getItem('base_url') || DEFAULT_BASE_URL;
+  var usingDefaultBase = baseUrl === DEFAULT_BASE_URL;
   var model = localStorage.getItem('model') || 'claude-haiku-4-5';
   var systemMessage = localStorage.getItem('system_message') || "You're running on a Pebble smartwatch. Please respond in plain text without any formatting, keeping your responses within 1-3 sentences.";
   var webSearchEnabled = localStorage.getItem('web_search_enabled') === 'true';
@@ -66,7 +69,7 @@ function getClaudeResponse(messages) {
     console.log('Beta header: ' + betas.join(','));
   }
 
-  xhr.timeout = 15000;
+  xhr.timeout = usingDefaultBase ? 15000 : 90000;
 
   xhr.onload = function () {
     if (xhr.status === 200) {
@@ -148,7 +151,8 @@ function getClaudeResponse(messages) {
 
   xhr.ontimeout = function () {
     console.log('Request timeout');
-    Pebble.sendAppMessage({ 'RESPONSE_TEXT': 'Request timed out. Likely problems on Anthropic\'s side.' });
+    var timeoutMessage = usingDefaultBase ? 'Request timed out. Likely problems on Anthropic\'s side.' : 'Request timed out.';
+    Pebble.sendAppMessage({ 'RESPONSE_TEXT': timeoutMessage });
     Pebble.sendAppMessage({ 'RESPONSE_END': 1 });
   };
 

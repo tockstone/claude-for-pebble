@@ -76,7 +76,12 @@
     </tr>
     <tr class="advanced-field">
       <td><label for="base-url">Base URL</label></td>
-      <td><input type="text" id="base-url" placeholder="https://api.anthropic.com/v1/messages"></td>
+      <td>
+        <input type="text" id="base-url" placeholder="https://api.anthropic.com/v1/messages">
+        <small style="display: block; color: #666; margin-top: 4px;">To use a self-hosted proxy from this repo's
+          <code>server/</code> directory, enter its URL ending in /v1/messages and put its shared secret in the key
+          field.</small>
+      </td>
     </tr>
     <tr class="advanced-field">
       <td><label for="model">Model</label></td>
