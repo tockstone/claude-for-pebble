@@ -216,7 +216,7 @@ Pebble.addEventListener('showConfiguration', function () {
   var mcpServers = localStorage.getItem('mcp_servers') || '';
 
   // Build configuration URL
-  var url = 'https://breitburg.github.io/claude-for-pebble/config/';
+  var url = 'https://tockstone.github.io/claude-for-pebble/config/';
   url += '?api_key=' + encodeURIComponent(apiKey);
   url += '&base_url=' + encodeURIComponent(baseUrl);
   url += '&model=' + encodeURIComponent(model);
