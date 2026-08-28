@@ -21,6 +21,10 @@ function parseConversation(encoded) {
   return messages;
 }
 
+function isOAuthToken(key) {
+  return key.indexOf('sk-ant-oat') === 0;
+}
+
 // Get response from Claude API
 function getClaudeResponse(messages) {
   var apiKey = localStorage.getItem('api_key');
@@ -43,13 +47,23 @@ function getClaudeResponse(messages) {
   var xhr = new XMLHttpRequest();
   xhr.open('POST', baseUrl, true);
   xhr.setRequestHeader('Content-Type', 'application/json');
-  xhr.setRequestHeader('x-api-key', apiKey);
   xhr.setRequestHeader('anthropic-version', '2023-06-01');
 
-  // Add MCP beta header if MCP servers are configured
+  var betas = [];
+  if (isOAuthToken(apiKey)) {
+    xhr.setRequestHeader('Authorization', 'Bearer ' + apiKey);
+    betas.push('oauth-2025-04-20');
+  } else {
+    xhr.setRequestHeader('x-api-key', apiKey);
+  }
+
   if (mcpServersJson && mcpServersJson.trim().length > 0) {
-    xhr.setRequestHeader('anthropic-beta', 'mcp-client-2025-04-04');
-    console.log('MCP beta header added');
+    betas.push('mcp-client-2025-04-04');
+  }
+
+  if (betas.length > 0) {
+    xhr.setRequestHeader('anthropic-beta', betas.join(','));
+    console.log('Beta header: ' + betas.join(','));
   }
 
   xhr.timeout = 15000;
