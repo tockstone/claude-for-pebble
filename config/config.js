@@ -39,6 +39,20 @@ var mcpServers = getQueryParam('mcp_servers');
 
 var returnTo = getQueryParam('return_to') || 'pebblejs://close#';
 
+function normalizedBaseUrl(value) {
+  return value.trim().replace(/\/+$/, '');
+}
+
+function modelsUrlFrom(messagesUrl) {
+  if (messagesUrl === defaults.base_url) {
+    return MODELS_URL;
+  }
+  if (/\/v1\/messages\/?$/.test(messagesUrl)) {
+    return messagesUrl.replace(/\/v1\/messages\/?$/, '/v1/models');
+  }
+  return null;
+}
+
 function keyKind(key) {
   if ('sk-ant-'.indexOf(key) === 0) {
     return 'partial';
@@ -132,23 +146,27 @@ function checkKey(key, messagesUrl) {
     setKeyStatus('', '');
     return;
   }
-  if (messagesUrl !== defaults.base_url) {
-    setKeyStatus('notice', 'Keys are only checked against api.anthropic.com.');
+  var isDefaultBase = messagesUrl === defaults.base_url;
+  var checkUrl = modelsUrlFrom(messagesUrl);
+  if (!checkUrl) {
+    setKeyStatus('notice', 'Keys cannot be checked against this base URL.');
     return;
   }
-  if (kind === 'unknown') {
-    setKeyStatus('invalid', '✗ Anthropic keys start with sk-ant-');
-    return;
-  }
-  if (kind === 'session') {
-    setKeyStatus('notice', 'This is a claude.ai session key. The Pebble app cannot use it. Paste an API key from console.anthropic.com instead.');
-    return;
+  if (isDefaultBase) {
+    if (kind === 'unknown') {
+      setKeyStatus('invalid', '✗ Anthropic keys start with sk-ant-');
+      return;
+    }
+    if (kind === 'session') {
+      setKeyStatus('notice', 'This is a claude.ai session key. The Pebble app cannot use it. Paste an API key from console.anthropic.com instead.');
+      return;
+    }
   }
 
   setKeyStatus('checking', 'Checking key…');
 
   var xhr = new XMLHttpRequest();
-  xhr.open('GET', MODELS_URL, true);
+  xhr.open('GET', checkUrl, true);
   xhr.setRequestHeader('anthropic-version', '2023-06-01');
   xhr.setRequestHeader('anthropic-dangerous-direct-browser-access', 'true');
   if (kind === 'oauth') {
@@ -161,13 +179,21 @@ function checkKey(key, messagesUrl) {
 
   xhr.onload = whenCurrent(function () {
     if (xhr.status !== 200) {
-      var message = errorMessageFrom(xhr.responseText);
-      setKeyStatus('invalid', '✗ Rejected (' + xhr.status + ')' + (message ? ': ' + message : ''));
+      if (isDefaultBase || xhr.status === 401 || xhr.status === 403) {
+        var message = errorMessageFrom(xhr.responseText);
+        setKeyStatus('invalid', '✗ Rejected (' + xhr.status + ')' + (message ? ': ' + message : ''));
+      } else {
+        setKeyStatus('notice', 'This server does not offer a key check (status ' + xhr.status + ').');
+      }
       return;
     }
     var models = modelsFrom(xhr.responseText);
     if (!models) {
-      setKeyStatus('invalid', '✗ Unexpected response from the API.');
+      if (isDefaultBase) {
+        setKeyStatus('invalid', '✗ Unexpected response from the API.');
+      } else {
+        setKeyStatus('notice', 'This server did not return a model list.');
+      }
       return;
     }
     populateModels(models, selectedModel());
@@ -175,11 +201,19 @@ function checkKey(key, messagesUrl) {
   });
 
   xhr.onerror = whenCurrent(function () {
-    setKeyStatus('invalid', '✗ Could not reach the API.');
+    if (isDefaultBase) {
+      setKeyStatus('invalid', '✗ Could not reach the API.');
+    } else {
+      setKeyStatus('notice', 'Could not reach this server.');
+    }
   });
 
   xhr.ontimeout = whenCurrent(function () {
-    setKeyStatus('invalid', '✗ The API did not answer in time.');
+    if (isDefaultBase) {
+      setKeyStatus('invalid', '✗ The API did not answer in time.');
+    } else {
+      setKeyStatus('notice', 'This server did not answer in time.');
+    }
   });
 
   xhr.send();
@@ -209,7 +243,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function checkKeyNow() {
     clearTimeout(keyCheckTimer);
-    checkKey(apiKeyInput.value.trim(), baseUrlInput.value.trim() || defaults.base_url);
+    checkKey(apiKeyInput.value.trim(), normalizedBaseUrl(baseUrlInput.value) || defaults.base_url);
   }
 
   function scheduleKeyCheck() {
@@ -250,7 +284,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     var settings = {
       api_key: apiKeyInput.value.trim(),
-      base_url: baseUrlInput.value.trim(),
+      base_url: normalizedBaseUrl(baseUrlInput.value),
       model: selectedModel(),
       system_message: document.getElementById('system-message').value.trim(),
       web_search_enabled: document.getElementById('web-search').checked.toString(),
