@@ -17,6 +17,7 @@
     }
 
     input[type="text"],
+    select,
     textarea {
       width: 100%;
       box-sizing: border-box;
@@ -24,6 +25,36 @@
 
     #mcp-servers {
       font-family: monospace;
+    }
+
+    #key-status,
+    #custom-model {
+      margin-top: 4px;
+    }
+
+    #key-status {
+      display: block;
+      font-size: 0.9em;
+    }
+
+    #key-status:empty {
+      display: none;
+    }
+
+    #key-status.checking {
+      color: #666;
+    }
+
+    #key-status.valid {
+      color: #1a7f37;
+    }
+
+    #key-status.invalid {
+      color: #c62828;
+    }
+
+    #key-status.notice {
+      color: #9a6700;
     }
   </style>
 </head>
@@ -37,7 +68,11 @@
   <table>
     <tr>
       <td><label for="api-key">Anthropic API Key</label></td>
-      <td><input type="text" id="api-key" placeholder="sk-ant-..."></td>
+      <td>
+        <input type="text" id="api-key" placeholder="sk-ant-..." autocomplete="off" autocapitalize="off"
+          spellcheck="false">
+        <small id="key-status" aria-live="polite"></small>
+      </td>
     </tr>
     <tr class="advanced-field">
       <td><label for="base-url">Base URL</label></td>
@@ -45,7 +80,11 @@
     </tr>
     <tr class="advanced-field">
       <td><label for="model">Model</label></td>
-      <td><input type="text" id="model" placeholder="claude-haiku-4-5"></td>
+      <td>
+        <select id="model"></select>
+        <input type="text" id="custom-model" placeholder="Model ID" autocomplete="off" autocapitalize="off"
+          spellcheck="false">
+      </td>
     </tr>
     <tr class="advanced-field">
       <td><label for="system-message">System Message</label></td>
